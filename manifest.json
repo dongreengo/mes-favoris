@@ -22,7 +22,7 @@
     }
   ],
   "share_target": {
-    "action": "./index.html",
+    "action": "https://dongreengo.github.io/mes-favoris/index.html",
     "method": "GET",
     "params": {
       "title": "title",
