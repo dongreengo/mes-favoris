@@ -54,6 +54,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .thumb{width:76px;height:100px;border-radius:10px;position:relative;overflow:hidden;display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:1.5rem;text-decoration:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
 .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .thumb .badge{position:absolute;left:5px;bottom:5px;width:24px;height:24px;border-radius:7px;background:#fff;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.igthumb iframe{position:absolute;left:0;top:-13px;width:326px;height:620px;border:0;transform:scale(.2332);transform-origin:0 0;pointer-events:none;opacity:0;transition:opacity .4s;background:#fff}
+.igthumb iframe.on{opacity:1}
+.igthumb .badge{z-index:1}
 .bigfav{width:46px;height:46px;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .fav{display:block;border-radius:4px}
 .favl{display:grid;place-items:center;width:100%;height:100%;border-radius:inherit;color:#fff;font-family:var(--display);font-weight:800;font-size:.75rem}
@@ -242,9 +245,13 @@ function thumbHtml(i,link){
   const attrs=link?`href="${esc(i.url)}" target="_blank" rel="noopener" aria-label="Ouvrir ${esc(i.title||'')}"`:'aria-hidden="true"';
   const loading=pending.has(i.id)?' loading':'';
   const dom=p.d||host(i.url||'');
+  const ig=!i.thumb&&!i.example&&i.platform==='instagram'&&igCode(i.url);
+  if(ig)return `<${tag} class="thumb igthumb" style="background:${p.c}" ${attrs}><span class="bigfav">${fav(dom,p,32)}</span><iframe src="https://www.instagram.com/p/${ig}/embed/" loading="lazy" scrolling="no" tabindex="-1" title="" aria-hidden="true" onload="this.classList.add('on')"></iframe><span class="badge">${fav(dom,p,16)}</span></${tag}>`;
   if(i.thumb)return `<${tag} class="thumb${loading}" style="background:${p.c}" ${attrs}><img src="${esc(i.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-thumb="${i.id}"><span class="badge">${fav(dom,p,16)}</span></${tag}>`;
   return `<${tag} class="thumb${loading}" style="background:${p.c}" ${attrs}><span class="bigfav">${fav(dom,p,32)}</span></${tag}>`;
 }
+/* Instagram : aperçu officiel du post, en miniature */
+function igCode(u){try{const m=new URL(u).pathname.match(/\/(?:p|reels?|tv)\/([A-Za-z0-9_-]+)/);return m?m[1]:null}catch(e){return null}}
 /* Icône officielle du site (favicon), lettre de secours si elle ne charge pas */
 function favUrl(dom){return 'https://www.google.com/s2/favicons?domain='+encodeURIComponent(dom)+'&sz=64'}
 function fav(dom,p,size){
@@ -259,28 +266,33 @@ function getJSON(u){
 function ytId(u){try{const x=new URL(u);if(/youtu\.be$/.test(x.hostname))return x.pathname.slice(1).split('/')[0];
   const m=x.pathname.match(/\/(shorts|embed|live)\/([\w-]{6,})/);return m?m[2]:x.searchParams.get('v')}catch(e){return null}}
 /* Liens courts TikTok (vm.tiktok.com…) : on retrouve l'adresse complète de la vidéo */
-async function resolveShort(url){
-  try{
-    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url));const j=await r.json();
-    let u=j&&j.data&&j.data.url;
-    if(u&&!/^https?:\/\//.test(u)){const m=String(u).match(/https?:\/\/[^\s`'"]+/);u=m?m[0]:null}
-    const img=j&&j.status==='success'&&j.data.image&&j.data.image.url;
-    return {url:u&&/\/video\/|\/photo\//.test(u)?u.split('?')[0]:null,thumb:img||null,title:j&&j.status==='success'?j.data.title:null};
+/* Relais Myfav's (Cloudflare) : titre + image pour Instagram, Pinterest, liens courts... */
+const RELAY='https://myfavs.cristo-nieto1.workers.dev/?url=';
+async function relay(url){
+  try{const j=await getJSON(RELAY+encodeURIComponent(url));
+    if(!j||j.error)return {};
+    let home=false;try{home=new URL(j.url||url).pathname.replace(/\/$/,'')===''}catch(e){}
+    if(home)return {};               /* lien mort : la plateforme renvoie sa page d'accueil */
+    return {url:j.url||null,thumb:j.thumb||null,title:j.title||null};
   }catch(e){return {}}
 }
 async function fetchMeta(url,plat){
   let out={};
+  const enc0=encodeURIComponent(url);
   if(plat==='tiktok'&&!/\/video\/|\/photo\//.test(url)){
-    const r=await resolveShort(url);if(r.url){out.fullUrl=r.url;url=r.url}
-    if(r.thumb)out.thumb=r.thumb;
+    const r=await relay(url);
+    if(r.url&&/\/video\/|\/photo\//.test(r.url)){out.fullUrl=r.url.split('?')[0];url=out.fullUrl}
+    if(r.thumb)out.relayThumb=r.thumb;
   }
   const enc=encodeURIComponent(url);
   const tries=[];
   if(plat==='youtube'){const id=ytId(url);if(id)out.thumb=`https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
     tries.push(()=>getJSON('https://noembed.com/embed?url='+enc).then(j=>({title:j.title})))}
   if(plat==='tiktok')tries.push(()=>getJSON('https://www.tiktok.com/oembed?url='+enc).then(j=>({thumb:j.thumbnail_url,title:j.title||(j.author_unique_id?'Vidéo de @'+j.author_unique_id:'')})));
-  if(plat==='tiktok'&&out.thumb){const t=out.thumb;delete out.thumb;tries.push(()=>Promise.resolve({thumb:t}))}  /* l'image TikTok officielle d'abord */
+  if(out.relayThumb){const t=out.relayThumb;delete out.relayThumb;tries.push(()=>Promise.resolve({thumb:t}))}
+  if(plat!=='youtube'&&plat!=='tiktok')tries.push(()=>relay(url));
   if(plat!=='youtube'&&plat!=='tiktok')tries.push(()=>getJSON('https://noembed.com/embed?url='+enc).then(j=>{if(j.error)throw 0;return {thumb:j.thumbnail_url,title:j.title}}));
+  if(plat==='tiktok'||plat==='youtube')tries.push(()=>relay(url));
   tries.push(()=>getJSON('https://api.microlink.io/?url='+enc).then(j=>{const d=j&&j.data||{};return {thumb:d.image&&d.image.url,title:d.title}}));
   for(const f of tries){
     if(out.thumb&&out.title)break;
@@ -299,9 +311,9 @@ async function pump(){
       if(m.thumb)it.thumb=m.thumb;
       const auto=it.autoTitle||it.title===guessTitle(it.url,it.platform);
       if(m.title&&auto){it.title=String(m.title).replace(/\s+/g,' ').trim().slice(0,160);it.autoTitle=true}
-      it.metaTried=Date.now();it.metaV=2;
+      it.metaTried=Date.now();it.metaV=3;
     }
-    pending.delete(id);save();render();
+    pending.delete(id);save();if(!queue.length)render();
     await new Promise(r=>setTimeout(r,400));
   }
   busy=false;
@@ -495,7 +507,7 @@ $('#restoreBtn').onclick=()=>{
 items=load();
 if(!items){items=examples();save()}
 render();
-items.forEach(i=>{if(!i.example&&!i.thumb&&!i.customThumb&&(!i.metaTried||i.metaV!==2||Date.now()-i.metaTried>86400000))enqueue(i.id)});
+items.forEach(i=>{if(!i.example&&!i.thumb&&!i.customThumb&&(!i.metaTried||i.metaV!==3||Date.now()-i.metaTried>86400000))enqueue(i.id)});
 try{
   const sp=new URLSearchParams(location.search);
   if(sp.has('url')||sp.has('text')){
