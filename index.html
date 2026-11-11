@@ -50,8 +50,17 @@ button{font:inherit;color:inherit;cursor:pointer}
 .notice{background:var(--accent-soft);border-radius:12px;padding:10px 14px;font-size:.85rem;display:flex;gap:10px;align-items:center;justify-content:space-between;margin-block:6px}
 .notice button{background:none;border:0;color:var(--accent);font-weight:600;padding:4px 0;white-space:nowrap}
 .list{display:grid;gap:10px;margin-top:6px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;display:grid;grid-template-columns:52px 1fr auto;gap:12px;padding:12px;align-items:start}
-.tile{width:52px;height:52px;border-radius:12px;display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:1.25rem;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;display:grid;grid-template-columns:76px 1fr auto;gap:12px;padding:10px;align-items:start}
+.thumb{width:76px;height:100px;border-radius:10px;position:relative;overflow:hidden;display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:1.5rem;text-decoration:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.thumb .badge{position:absolute;left:5px;bottom:5px;min-width:20px;height:20px;padding:0 4px;border-radius:6px;display:grid;place-items:center;font-size:.7rem;color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.thumb.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.18) 50%,transparent 70%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+@keyframes sh{from{background-position:150% 0}to{background-position:-50% 0}}
+.pick{display:flex;gap:14px;align-items:center}
+.pick .thumb{flex:none}
+.pick .col{display:grid;gap:6px;justify-items:start}
+.linkbtn{background:none;border:0;color:var(--danger);font-weight:600;padding:4px 0;font-size:.85rem}
+.hint{font-size:.78rem;color:var(--muted);font-weight:400;letter-spacing:0}
 .body{min-width:0}
 .t{font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .meta{color:var(--muted);font-size:.8rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 10px;font-variant-numeric:tabular-nums}
@@ -82,7 +91,7 @@ textarea{min-height:70px;resize:vertical}
 .sec h3{margin:0;font-size:.95rem}
 .sec p{margin:0;color:var(--muted);font-size:.85rem}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.88rem;z-index:20;max-width:calc(100% - 32px)}
-@media (prefers-reduced-motion:no-preference){.card{animation:in .25s ease both}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
+@media (prefers-reduced-motion:reduce){.thumb.loading::after{animation:none}}
 </style>
 <script>window.__PWA__=true</script>
 </head>
@@ -121,6 +130,15 @@ textarea{min-height:70px;resize:vertical}
     <label>Lien<input type="url" id="f-url" required placeholder="Colle le lien TikTok, Insta, YouTube…" inputmode="url"></label>
     <div class="detect" id="detect"></div>
     <label>Titre<input type="text" id="f-title" placeholder="De quoi ça parle ?"></label>
+    <div class="pick">
+      <div class="thumb" id="prev"></div>
+      <div class="col">
+        <span class="hint">Vignette : trouvée toute seule quand c'est possible. Sinon, mets une capture d'écran.</span>
+        <button type="button" class="btn" id="pickImg">Choisir une image</button>
+        <button type="button" class="linkbtn" id="rmImg" hidden>Retirer l'image</button>
+        <input type="file" id="f-img" accept="image/*" hidden>
+      </div>
+    </div>
     <label>Thème<input type="text" id="f-tag" list="tagList" placeholder="Recettes, Bricolage, À tester…"></label>
     <datalist id="tagList"></datalist>
     <label>Note<textarea id="f-note" placeholder="Pourquoi tu l'as gardé (facultatif)"></textarea></label>
@@ -176,11 +194,12 @@ const $=s=>document.querySelector(s);
 let items=[], fPlat='all', fTag='all', editingId=null;
 
 function load(){try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r)}catch(e){}return null}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){if(e&&e.name==='QuotaExceededError')toast('Mémoire pleine : retire quelques images choisies à la main.')}}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function host(u){try{return new URL(u).hostname.replace(/^www\.|^m\.|^vm\.|^vt\./,'')}catch(e){return''}}
 function platform(u){const h=host(u);for(const k in P){if(P[k].re&&P[k].re.test(h))return k}return 'autre'}
-function norm(u){try{const x=new URL(u);return (x.hostname.replace(/^www\.|^m\./,'')+x.pathname).replace(/\/$/,'').toLowerCase()}catch(e){return u}}
+function norm(u){try{const x=new URL(u);const keep=['v','id','story_fbid','fbid'].filter(k=>x.searchParams.has(k)).map(k=>k+'='+x.searchParams.get(k)).join('&');
+  return ((x.hostname.replace(/^www\.|^m\./,'')+x.pathname).replace(/\/$/,'').toLowerCase())+(keep?'?'+keep:'')}catch(e){return u}}
 function findUrl(t){const m=(t||'').match(/https?:\/\/[^\s"'<>]+/);return m?m[0].replace(/[).,;!]+$/,''):''}
 function guessTitle(u,p){
   try{const x=new URL(u);const a=x.pathname.match(/\/@([\w.]+)/);
@@ -203,6 +222,64 @@ function examples(){
     {url:'https://www.reddit.com/r/LifeProTips/comments/abc123/',title:'Retirer une étiquette sans laisser de colle',tag:'Bricolage',note:'',savedAt:n-d*9},
     {url:'https://www.instagram.com/p/C8yExemple/',title:'Resto à tester ce week-end',tag:'Sorties',note:'',savedAt:n-d*12}
   ].map(e=>({...e,id:uid(),platform:platform(e.url),addedAt:e.savedAt,example:true}));
+}
+
+/* ---------- Vignettes ---------- */
+function thumbHtml(i,link){
+  const p=P[i.platform],tag=link?'a':'div';
+  const attrs=link?`href="${esc(i.url)}" target="_blank" rel="noopener" aria-label="Ouvrir ${esc(i.title||'')}"`:'aria-hidden="true"';
+  const loading=pending.has(i.id)?' loading':'';
+  if(i.thumb)return `<${tag} class="thumb${loading}" style="background:${p.c}" ${attrs}><img src="${esc(i.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-thumb="${i.id}"><span class="badge" style="background:${p.c}">${p.l}</span></${tag}>`;
+  return `<${tag} class="thumb${loading}" style="background:${p.c}" ${attrs}>${p.l}</${tag}>`;
+}
+const pending=new Set(),queue=[],retried=new Set();let busy=false;
+function getJSON(u){
+  const ac=new AbortController();const t=setTimeout(()=>ac.abort(),9000);
+  return fetch(u,{signal:ac.signal}).then(r=>{clearTimeout(t);if(!r.ok)throw 0;return r.json()});
+}
+function ytId(u){try{const x=new URL(u);if(/youtu\.be$/.test(x.hostname))return x.pathname.slice(1).split('/')[0];
+  const m=x.pathname.match(/\/(shorts|embed|live)\/([\w-]{6,})/);return m?m[2]:x.searchParams.get('v')}catch(e){return null}}
+async function fetchMeta(url,plat){
+  const enc=encodeURIComponent(url);let out={};
+  const tries=[];
+  if(plat==='youtube'){const id=ytId(url);if(id)out.thumb=`https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+    tries.push(()=>getJSON('https://noembed.com/embed?url='+enc).then(j=>({title:j.title})))}
+  if(plat==='tiktok')tries.push(()=>getJSON('https://www.tiktok.com/oembed?url='+enc).then(j=>({thumb:j.thumbnail_url,title:j.title||(j.author_unique_id?'Vidéo de @'+j.author_unique_id:'')})));
+  if(plat!=='youtube'&&plat!=='tiktok')tries.push(()=>getJSON('https://noembed.com/embed?url='+enc).then(j=>{if(j.error)throw 0;return {thumb:j.thumbnail_url,title:j.title}}));
+  tries.push(()=>getJSON('https://api.microlink.io/?url='+enc).then(j=>{const d=j&&j.data||{};return {thumb:d.image&&d.image.url,title:d.title}}));
+  for(const f of tries){
+    if(out.thumb&&out.title)break;
+    try{const r=await f();if(!out.thumb&&r.thumb)out.thumb=r.thumb;if(!out.title&&r.title)out.title=r.title}catch(e){}
+  }
+  return out;
+}
+function enqueue(id){if(pending.has(id))return;pending.add(id);queue.push(id);pump()}
+async function pump(){
+  if(busy)return;busy=true;
+  while(queue.length){
+    const id=queue.shift(),it=items.find(i=>i.id===id);
+    if(it&&!it.customThumb){
+      const m=await fetchMeta(it.url,it.platform);
+      if(m.thumb)it.thumb=m.thumb;
+      const auto=it.autoTitle||it.title===guessTitle(it.url,it.platform);
+      if(m.title&&auto){it.title=String(m.title).replace(/\s+/g,' ').trim().slice(0,160);it.autoTitle=true}
+      it.metaTried=Date.now();
+    }
+    pending.delete(id);save();render();
+    await new Promise(r=>setTimeout(r,400));
+  }
+  busy=false;
+}
+document.addEventListener('error',e=>{
+  const img=e.target;if(!img||img.tagName!=='IMG'||!img.dataset.thumb)return;
+  const it=items.find(i=>i.id===img.dataset.thumb);img.remove();
+  if(!it||it.customThumb||retried.has(it.id))return;
+  retried.add(it.id);it.thumb=null;enqueue(it.id);   /* les liens d'image TikTok expirent : on redemande */
+},true);
+function resizeImage(file){
+  return new Promise((ok,ko)=>{const r=new FileReader();r.onerror=ko;r.onload=()=>{const im=new Image();im.onerror=ko;im.onload=()=>{
+    const H=260,s=Math.min(1,H/im.height),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',.78))};im.src=r.result};r.readAsDataURL(file)});
 }
 
 function render(){
@@ -229,7 +306,7 @@ function render(){
   if(!shown.length){$('#list').innerHTML=`<div class="empty"><strong>Rien ne correspond</strong>Essaie un autre mot ou un autre filtre.</div>`;return}
   $('#list').innerHTML=shown.map(i=>{const p=P[i.platform];return `
   <article class="card" data-id="${i.id}">
-    <div class="tile" style="background:${p.c}" aria-hidden="true">${p.l}</div>
+    ${thumbHtml(i,true)}
     <div class="body">
       <div class="t">${esc(i.title||guessTitle(i.url,i.platform))}</div>
       <div class="meta"><span>${p.n}</span><span>${fmtDate(i.savedAt)}</span>${i.example?'<span>exemple</span>':''}</div>
@@ -249,16 +326,31 @@ function openEdit(it,prefill){
   $('#editTitle').textContent=it?'Modifier le favori':'Nouveau favori';
   const d=it||prefill||{};
   $('#f-url').value=d.url||'';$('#f-title').value=d.title||'';$('#f-tag').value=d.tag||'';$('#f-note').value=d.note||'';
-  updDetect();
+  imgChoice=undefined;updDetect();updPrev();
   const dl=$('#editDlg');try{dl.showModal()}catch(e){dl.setAttribute('open','')}
   if(!d.url)setTimeout(()=>$('#f-url').focus(),50);
 }
+let imgChoice; /* undefined = inchangé, chaîne = image choisie, null = retirée */
+function updPrev(){
+  const it=editingId&&items.find(i=>i.id===editingId);
+  const u=$('#f-url').value.trim(),p=/^https?:\/\//.test(u)?platform(u):(it?it.platform:'autre');
+  const thumb=imgChoice!==undefined?imgChoice:(it?it.thumb:null);
+  $('#prev').outerHTML=thumbHtml({id:'prev',platform:p,thumb},false).replace('class="thumb','id="prev" class="thumb');
+  $('#rmImg').hidden=!(imgChoice||(imgChoice===undefined&&it&&it.customThumb));
+}
+$('#pickImg').onclick=()=>$('#f-img').click();
+$('#f-img').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{imgChoice=await resizeImage(f);updPrev()}catch(err){toast("Cette image n'a pas pu être lue. Essaie une capture d'écran.")}
+});
+$('#rmImg').onclick=()=>{imgChoice=null;updPrev()};
 function closeDlg(id){const d=$(id);try{d.close()}catch(e){d.removeAttribute('open')}}
 function updDetect(){
   const u=$('#f-url').value.trim();
   if(!/^https?:\/\//.test(u)){$('#detect').innerHTML='';return}
   const p=platform(u),dup=items.find(i=>i.id!==editingId&&norm(i.url)===norm(u));
   $('#detect').innerHTML=`<span class="dot" style="background:${P[p].c}"></span>${P[p].n} détecté${dup?' · déjà dans tes favoris':''}`;
+  if(imgChoice===undefined&&!editingId)updPrev();
 }
 $('#f-url').addEventListener('input',()=>{const v=$('#f-url').value;const u=findUrl(v);if(u&&u!==v.trim()){$('#f-url').value=u;if(!$('#f-title').value)$('#f-title').value=v.replace(u,'').trim().slice(0,140)}updDetect()});
 
@@ -266,13 +358,21 @@ $('#editForm').addEventListener('submit',e=>{
   e.preventDefault();
   const url=findUrl($('#f-url').value.trim())||$('#f-url').value.trim();
   if(!/^https?:\/\//.test(url)){toast('Ce lien ne commence pas par http. Colle le lien complet.');return}
-  const p=platform(url);
-  const data={url,platform:p,title:$('#f-title').value.trim()||guessTitle(url,p),tag:$('#f-tag').value.trim(),note:$('#f-note').value.trim()};
-  if(editingId){const it=items.find(i=>i.id===editingId);Object.assign(it,data);delete it.example;toast('Favori modifié')}
-  else{const dup=items.find(i=>norm(i.url)===norm(url));
-    if(dup){Object.assign(dup,data);toast('Déjà présent, mis à jour')}
-    else{items.push({...data,id:uid(),savedAt:Date.now(),addedAt:Date.now()});toast('Ajouté à tes favoris '+P[p].n)}}
-  save();closeDlg('#editDlg');render();
+  const p=platform(url);const typed=$('#f-title').value.trim();
+  const data={url,platform:p,title:typed||guessTitle(url,p),autoTitle:!typed,tag:$('#f-tag').value.trim(),note:$('#f-note').value.trim()};
+  let target;
+  if(editingId){target=items.find(i=>i.id===editingId);
+    if(typed&&typed===target.title)data.autoTitle=!!target.autoTitle;
+    if(norm(target.url)!==norm(url)&&!target.customThumb)target.thumb=null;
+    Object.assign(target,data);delete target.example;toast('Favori modifié')}
+  else{target=items.find(i=>norm(i.url)===norm(url));
+    if(target){Object.assign(target,data);toast('Déjà présent, mis à jour')}
+    else{target={...data,id:uid(),savedAt:Date.now(),addedAt:Date.now()};items.push(target);toast('Ajouté à tes favoris '+P[p].n)}}
+  if(imgChoice){target.thumb=imgChoice;target.customThumb=true}
+  else if(imgChoice===null){target.thumb=null;target.customThumb=false}
+  save();closeDlg('#editDlg');
+  if(!target.thumb&&!target.customThumb)enqueue(target.id);
+  render();
 });
 $('#cancelEdit').onclick=()=>closeDlg('#editDlg');
 $('#addBtn').onclick=()=>openEdit(null);
@@ -323,6 +423,7 @@ $('#f-import').addEventListener('change',async e=>{
   found.forEach(x=>{const k=norm(x.url);if(seen.has(k)){dup++;return}seen.add(k);const p=platform(x.url);
     items.push({id:uid(),url:x.url,platform:p,title:guessTitle(x.url,p),tag:'',note:'',savedAt:x.date||Date.now(),addedAt:Date.now(),imported:true});add++});
   save();render();closeDlg('#setDlg');e.target.value='';
+  items.forEach(i=>{if(i.imported&&!i.thumb&&!i.metaTried)enqueue(i.id)});
   toast(add+' favori'+(add>1?'s':'')+' importé'+(add>1?'s':'')+(dup?' ('+dup+' déjà présents)':''));
 });
 $('#copyBackup').onclick=()=>{
@@ -343,6 +444,7 @@ $('#restoreBtn').onclick=()=>{
 items=load();
 if(!items){items=examples();save()}
 render();
+items.forEach(i=>{if(!i.example&&!i.thumb&&!i.customThumb&&(!i.metaTried||Date.now()-i.metaTried>86400000))enqueue(i.id)});
 try{
   const sp=new URLSearchParams(location.search);
   if(sp.has('url')||sp.has('text')){
