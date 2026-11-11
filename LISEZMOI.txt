@@ -1,0 +1,9 @@
+MES FAVORIS - installer l'appli sur ton téléphone Android
+
+1. Crée un compte gratuit sur https://app.netlify.com/drop (ou GitHub Pages).
+2. Glisse le dossier entier (index.html, manifest.json, sw.js, les 2 icônes) dans la page Netlify Drop.
+3. Ouvre l'adresse obtenue dans Chrome sur ton téléphone.
+4. Menu ⋮ > « Installer l'application » (ou « Ajouter à l'écran d'accueil »).
+5. Dans TikTok ou Instagram : Partager > Plus (…) > « Mes Favoris ». Le lien arrive dans l'appli.
+
+Tes favoris restent stockés sur ton téléphone uniquement.

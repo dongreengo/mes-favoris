@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3B4FD8">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Mes Favoris</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column de cartes, barre de filtres collante, bouton + flottant en bas */
+:root{
+  --bg:#F3F4F9; --surface:#FFFFFF; --fg:#171A2B; --muted:#646A85; --line:#DEE1EC;
+  --accent:#3B4FD8; --accent-ink:#FFFFFF; --accent-soft:#E4E7FB; --danger:#C62F3F;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1120; --surface:#191C30; --fg:#ECEEF8; --muted:#9AA0BE; --line:#2B2F4A;
+  --accent:#8C9BFF; --accent-ink:#0F1120; --accent-soft:#252B57; --danger:#FF7A88; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1120; --surface:#191C30; --fg:#ECEEF8; --muted:#9AA0BE; --line:#2B2F4A;
+  --accent:#8C9BFF; --accent-ink:#0F1120; --accent-soft:#252B57; --danger:#FF7A88; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 110px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:640px;margin:0 auto}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:22px 6px}
+h1{font-family:var(--display);font-weight:800;font-size:2rem;letter-spacing:-.02em;margin:0;line-height:1}
+.sub{color:var(--muted);font-size:.85rem;margin-top:6px;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+.iconbtn{background:var(--surface);border:1px solid var(--line);border-radius:12px;width:42px;height:42px;display:grid;place-items:center}
+.iconbtn svg{width:20px;height:20px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px 10px;display:grid;gap:10px}
+.search{width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:.85rem;font-weight:500;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip .n{font-variant-numeric:tabular-nums;opacity:.7}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.notice{background:var(--accent-soft);border-radius:12px;padding:10px 14px;font-size:.85rem;display:flex;gap:10px;align-items:center;justify-content:space-between;margin-block:6px}
+.notice button{background:none;border:0;color:var(--accent);font-weight:600;padding:4px 0;white-space:nowrap}
+.list{display:grid;gap:10px;margin-top:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;display:grid;grid-template-columns:52px 1fr auto;gap:12px;padding:12px;align-items:start}
+.tile{width:52px;height:52px;border-radius:12px;display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:1.25rem;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.body{min-width:0}
+.t{font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.meta{color:var(--muted);font-size:.8rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 10px;font-variant-numeric:tabular-nums}
+.note{font-size:.85rem;margin-top:6px;color:var(--fg);opacity:.85;overflow-wrap:anywhere}
+.tag{display:inline-block;margin-top:8px;padding:2px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:.78rem;font-weight:600;border:0}
+.acts{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.act{background:none;border:1px solid var(--line);border-radius:10px;height:34px;min-width:34px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:.78rem;font-weight:600;color:var(--muted);text-decoration:none}
+.act svg{width:16px;height:16px}
+.act.open{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.act.confirm{background:var(--danger);border-color:var(--danger);color:#fff}
+.empty{text-align:center;color:var(--muted);padding:48px 12px}
+.empty strong{display:block;font-family:var(--display);color:var(--fg);font-size:1.2rem;margin-bottom:6px}
+.fab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:6;height:56px;padding:0 22px 0 18px;border-radius:18px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 10px 24px -8px rgba(30,40,120,.45)}
+.fab svg{width:22px;height:22px}
+dialog{border:0;padding:0;background:transparent;max-width:100vw;width:100%;margin:auto auto 0;color:var(--fg)}
+dialog::backdrop{background:rgba(10,12,30,.5)}
+.sheet{background:var(--surface);border-radius:20px 20px 0 0;max-width:640px;margin:0 auto;padding:20px max(18px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px));display:grid;gap:14px;max-height:88vh;overflow-y:auto}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:1.35rem;margin:0}
+label{display:grid;gap:5px;font-size:.8rem;font-weight:600;color:var(--muted);letter-spacing:.02em}
+input[type=text],input[type=url],textarea{font:inherit;font-weight:400;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{min-height:70px;resize:vertical}
+.detect{font-size:.82rem;color:var(--muted);display:flex;align-items:center;gap:8px;min-height:20px}
+.row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.btn{border-radius:12px;padding:11px 18px;font-weight:600;border:1px solid var(--line);background:var(--surface)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.wide{width:100%}
+.sec{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:8px}
+.sec h3{margin:0;font-size:.95rem}
+.sec p{margin:0;color:var(--muted);font-size:.85rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.88rem;z-index:20;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:no-preference){.card{animation:in .25s ease both}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
+</style>
+<script>window.__PWA__=true</script>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Mes Favoris</h1>
+      <div class="sub" id="count"></div>
+    </div>
+    <button class="iconbtn" id="openSettings" aria-label="Importer et sauvegarder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    </button>
+  </header>
+
+  <div class="bar">
+    <input class="search" id="q" type="search" placeholder="Rechercher un favori, un thème…" aria-label="Rechercher">
+    <div class="chips" id="platChips"></div>
+    <div class="chips" id="tagChips"></div>
+  </div>
+
+  <div id="exNotice" class="notice" hidden>
+    <span>Ce sont des exemples pour te montrer l'appli.</span>
+    <button id="clearEx">Les effacer</button>
+  </div>
+  <div class="list" id="list"></div>
+</div>
+
+<button class="fab" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter</button>
+
+<dialog id="editDlg">
+  <form class="sheet" id="editForm">
+    <h2 id="editTitle">Nouveau favori</h2>
+    <label>Lien<input type="url" id="f-url" required placeholder="Colle le lien TikTok, Insta, YouTube…" inputmode="url"></label>
+    <div class="detect" id="detect"></div>
+    <label>Titre<input type="text" id="f-title" placeholder="De quoi ça parle ?"></label>
+    <label>Thème<input type="text" id="f-tag" list="tagList" placeholder="Recettes, Bricolage, À tester…"></label>
+    <datalist id="tagList"></datalist>
+    <label>Note<textarea id="f-note" placeholder="Pourquoi tu l'as gardé (facultatif)"></textarea></label>
+    <div class="row">
+      <button type="button" class="btn" id="cancelEdit">Annuler</button>
+      <button type="submit" class="btn primary" id="saveEdit">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="setDlg">
+  <div class="sheet">
+    <h2>Importer et sauvegarder</h2>
+    <div class="sec">
+      <h3>Importer tes anciens favoris</h3>
+      <p>Demande tes données à TikTok ou Instagram (Paramètres › Télécharger mes données, format JSON), puis choisis le fichier ici : pour TikTok le fichier <b>user_data</b>, pour Instagram <b>saved_posts.json</b>.</p>
+      <input type="file" id="f-import" accept=".json,.txt,application/json,text/plain">
+    </div>
+    <div class="sec">
+      <h3>Sauvegarde</h3>
+      <p>Copie tous tes favoris pour les garder ailleurs ou les remettre sur un autre téléphone.</p>
+      <button class="btn wide" id="copyBackup">Copier la sauvegarde</button>
+      <textarea id="f-restore" placeholder="Colle une sauvegarde ici pour la restaurer"></textarea>
+      <button class="btn wide" id="restoreBtn">Restaurer</button>
+    </div>
+    <div class="sec">
+      <h3>Ajouter depuis TikTok ou Insta en un geste</h3>
+      <p>Une fois l'appli installée sur ton téléphone, appuie sur Partager sous une vidéo puis choisis « Mes Favoris ». Le lien arrive ici tout seul.</p>
+    </div>
+    <div class="row"><button class="btn" id="closeSet">Fermer</button></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+const P={
+  tiktok:{n:'TikTok',c:'#16161D',l:'T',re:/(^|\.)tiktok\.com$/},
+  instagram:{n:'Instagram',c:'#C2357F',l:'I',re:/(^|\.)instagram\.com$|(^|\.)instagr\.am$/},
+  youtube:{n:'YouTube',c:'#D9201A',l:'Y',re:/(^|\.)youtube\.com$|(^|\.)youtu\.be$/},
+  facebook:{n:'Facebook',c:'#1767E0',l:'f',re:/(^|\.)facebook\.com$|(^|\.)fb\.watch$|(^|\.)fb\.com$/},
+  x:{n:'X',c:'#3A3A44',l:'X',re:/(^|\.)x\.com$|(^|\.)twitter\.com$/},
+  threads:{n:'Threads',c:'#55555F',l:'@',re:/(^|\.)threads\.(net|com)$/},
+  reddit:{n:'Reddit',c:'#E8470E',l:'r',re:/(^|\.)reddit\.com$|(^|\.)redd\.it$/},
+  pinterest:{n:'Pinterest',c:'#C8102E',l:'P',re:/(^|\.)pinterest\.[a-z.]+$|(^|\.)pin\.it$/},
+  snapchat:{n:'Snapchat',c:'#C9B800',l:'S',re:/(^|\.)snapchat\.com$/},
+  linkedin:{n:'LinkedIn',c:'#0A66C2',l:'in',re:/(^|\.)linkedin\.com$|(^|\.)lnkd\.in$/},
+  autre:{n:'Autre',c:'#6A6F8C',l:'•',re:null}
+};
+const KEY='mes-favoris-v1';
+const $=s=>document.querySelector(s);
+let items=[], fPlat='all', fTag='all', editingId=null;
+
+function load(){try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r)}catch(e){}return null}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function host(u){try{return new URL(u).hostname.replace(/^www\.|^m\.|^vm\.|^vt\./,'')}catch(e){return''}}
+function platform(u){const h=host(u);for(const k in P){if(P[k].re&&P[k].re.test(h))return k}return 'autre'}
+function norm(u){try{const x=new URL(u);return (x.hostname.replace(/^www\.|^m\./,'')+x.pathname).replace(/\/$/,'').toLowerCase()}catch(e){return u}}
+function findUrl(t){const m=(t||'').match(/https?:\/\/[^\s"'<>]+/);return m?m[0].replace(/[).,;!]+$/,''):''}
+function guessTitle(u,p){
+  try{const x=new URL(u);const a=x.pathname.match(/\/@([\w.]+)/);
+    if(p==='tiktok')return a?'Vidéo de @'+a[1]:'Vidéo TikTok';
+    if(p==='instagram')return /\/reels?\//.test(x.pathname)?'Reel Instagram':'Post Instagram';
+    if(p==='youtube')return /shorts/.test(x.pathname)?'Short YouTube':'Vidéo YouTube';
+    return 'Favori '+P[p].n}catch(e){return 'Favori'}
+}
+function fmtDate(ts){try{return new Date(ts).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}catch(e){return''}}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600)}
+
+function examples(){
+  const d=86400000,n=Date.now();
+  return [
+    {url:'https://www.tiktok.com/@cuisine.express/video/7301234567890',title:'Pâtes crémeuses en 10 minutes',tag:'Recettes',note:'À faire mardi',savedAt:n-d*1},
+    {url:'https://www.instagram.com/reel/C9xExemple/',title:'Astuce rangement atelier',tag:'Bricolage',note:'',savedAt:n-d*2},
+    {url:'https://www.youtube.com/watch?v=exemple01',title:'Pourquoi le ciel est bleu',tag:'Science',note:'Expliqué simplement',savedAt:n-d*4},
+    {url:'https://www.tiktok.com/@jardin.facile/video/7309876543210',title:'Bouturer un figuier',tag:'Jardin',note:'',savedAt:n-d*6},
+    {url:'https://www.reddit.com/r/LifeProTips/comments/abc123/',title:'Retirer une étiquette sans laisser de colle',tag:'Bricolage',note:'',savedAt:n-d*9},
+    {url:'https://www.instagram.com/p/C8yExemple/',title:'Resto à tester ce week-end',tag:'Sorties',note:'',savedAt:n-d*12}
+  ].map(e=>({...e,id:uid(),platform:platform(e.url),addedAt:e.savedAt,example:true}));
+}
+
+function render(){
+  const q=$('#q').value.trim().toLowerCase();
+  const byPlat={},byTag={};
+  items.forEach(i=>{byPlat[i.platform]=(byPlat[i.platform]||0)+1;if(i.tag)byTag[i.tag]=(byTag[i.tag]||0)+1});
+  const plats=Object.keys(P).filter(k=>byPlat[k]);
+  $('#count').textContent=items.length+' favori'+(items.length>1?'s':'')+' · '+plats.length+' plateforme'+(plats.length>1?'s':'');
+  if(fPlat!=='all'&&!byPlat[fPlat])fPlat='all';
+  if(fTag!=='all'&&!byTag[fTag])fTag='all';
+  $('#platChips').innerHTML=`<button class="chip" data-p="all" aria-pressed="${fPlat==='all'}">Tout <span class="n">${items.length}</span></button>`+
+    plats.map(k=>`<button class="chip" data-p="${k}" aria-pressed="${fPlat===k}"><span class="dot" style="background:${P[k].c}"></span>${P[k].n} <span class="n">${byPlat[k]}</span></button>`).join('');
+  const tags=Object.keys(byTag).sort((a,b)=>byTag[b]-byTag[a]);
+  $('#tagChips').hidden=!tags.length;
+  $('#tagChips').innerHTML=`<button class="chip" data-t="all" aria-pressed="${fTag==='all'}">Tous les thèmes</button>`+
+    tags.map(t=>`<button class="chip" data-t="${esc(t)}" aria-pressed="${fTag===t}">${esc(t)} <span class="n">${byTag[t]}</span></button>`).join('');
+  $('#tagList').innerHTML=tags.map(t=>`<option value="${esc(t)}">`).join('');
+  $('#exNotice').hidden=!items.some(i=>i.example);
+
+  const shown=items.filter(i=>(fPlat==='all'||i.platform===fPlat)&&(fTag==='all'||i.tag===fTag)&&
+    (!q||[i.title,i.note,i.tag,i.url,P[i.platform].n].join(' ').toLowerCase().includes(q)))
+    .sort((a,b)=>(b.savedAt||0)-(a.savedAt||0));
+  if(!items.length){$('#list').innerHTML=`<div class="empty"><strong>Aucun favori pour l'instant</strong>Appuie sur « Ajouter » et colle un lien, ou partage une vidéo vers Mes Favoris depuis TikTok ou Instagram.</div>`;return}
+  if(!shown.length){$('#list').innerHTML=`<div class="empty"><strong>Rien ne correspond</strong>Essaie un autre mot ou un autre filtre.</div>`;return}
+  $('#list').innerHTML=shown.map(i=>{const p=P[i.platform];return `
+  <article class="card" data-id="${i.id}">
+    <div class="tile" style="background:${p.c}" aria-hidden="true">${p.l}</div>
+    <div class="body">
+      <div class="t">${esc(i.title||guessTitle(i.url,i.platform))}</div>
+      <div class="meta"><span>${p.n}</span><span>${fmtDate(i.savedAt)}</span>${i.example?'<span>exemple</span>':''}</div>
+      ${i.note?`<div class="note">${esc(i.note)}</div>`:''}
+      <button class="tag" data-edit="${i.id}">${i.tag?esc(i.tag):'+ thème'}</button>
+    </div>
+    <div class="acts">
+      <a class="act open" href="${esc(i.url)}" target="_blank" rel="noopener" aria-label="Ouvrir">Ouvrir</a>
+      <button class="act" data-edit="${i.id}" aria-label="Modifier"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg></button>
+      <button class="act" data-del="${i.id}" aria-label="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M10 7V4h4v3m-7 0 1 13h8l1-13"/></svg></button>
+    </div>
+  </article>`}).join('');
+}
+
+function openEdit(it,prefill){
+  editingId=it?it.id:null;
+  $('#editTitle').textContent=it?'Modifier le favori':'Nouveau favori';
+  const d=it||prefill||{};
+  $('#f-url').value=d.url||'';$('#f-title').value=d.title||'';$('#f-tag').value=d.tag||'';$('#f-note').value=d.note||'';
+  updDetect();
+  const dl=$('#editDlg');try{dl.showModal()}catch(e){dl.setAttribute('open','')}
+  if(!d.url)setTimeout(()=>$('#f-url').focus(),50);
+}
+function closeDlg(id){const d=$(id);try{d.close()}catch(e){d.removeAttribute('open')}}
+function updDetect(){
+  const u=$('#f-url').value.trim();
+  if(!/^https?:\/\//.test(u)){$('#detect').innerHTML='';return}
+  const p=platform(u),dup=items.find(i=>i.id!==editingId&&norm(i.url)===norm(u));
+  $('#detect').innerHTML=`<span class="dot" style="background:${P[p].c}"></span>${P[p].n} détecté${dup?' · déjà dans tes favoris':''}`;
+}
+$('#f-url').addEventListener('input',()=>{const v=$('#f-url').value;const u=findUrl(v);if(u&&u!==v.trim()){$('#f-url').value=u;if(!$('#f-title').value)$('#f-title').value=v.replace(u,'').trim().slice(0,140)}updDetect()});
+
+$('#editForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const url=findUrl($('#f-url').value.trim())||$('#f-url').value.trim();
+  if(!/^https?:\/\//.test(url)){toast('Ce lien ne commence pas par http. Colle le lien complet.');return}
+  const p=platform(url);
+  const data={url,platform:p,title:$('#f-title').value.trim()||guessTitle(url,p),tag:$('#f-tag').value.trim(),note:$('#f-note').value.trim()};
+  if(editingId){const it=items.find(i=>i.id===editingId);Object.assign(it,data);delete it.example;toast('Favori modifié')}
+  else{const dup=items.find(i=>norm(i.url)===norm(url));
+    if(dup){Object.assign(dup,data);toast('Déjà présent, mis à jour')}
+    else{items.push({...data,id:uid(),savedAt:Date.now(),addedAt:Date.now()});toast('Ajouté à tes favoris '+P[p].n)}}
+  save();closeDlg('#editDlg');render();
+});
+$('#cancelEdit').onclick=()=>closeDlg('#editDlg');
+$('#addBtn').onclick=()=>openEdit(null);
+$('#q').addEventListener('input',render);
+
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-p]');if(c){fPlat=c.dataset.p;render();return}
+  const t=e.target.closest('[data-t]');if(t){fTag=t.dataset.t;render();return}
+  const ed=e.target.closest('[data-edit]');if(ed){openEdit(items.find(i=>i.id===ed.dataset.edit));return}
+  const dl=e.target.closest('[data-del]');
+  if(dl){
+    if(dl.classList.contains('confirm')){items=items.filter(i=>i.id!==dl.dataset.del);save();render();toast('Favori supprimé');return}
+    dl.classList.add('confirm');dl.textContent='Sûr ?';setTimeout(()=>{if(document.body.contains(dl))render()},3000);
+  }
+});
+$('#clearEx').onclick=()=>{items=items.filter(i=>!i.example);save();render();toast('Exemples effacés')};
+
+/* Réglages : import RGPD et sauvegarde */
+$('#openSettings').onclick=()=>{const d=$('#setDlg');try{d.showModal()}catch(e){d.setAttribute('open','')}};
+$('#closeSet').onclick=()=>closeDlg('#setDlg');
+
+function toTs(v){if(v==null)return null;if(typeof v==='number')return v<1e12?v*1000:v;const n=Date.parse(String(v).replace(' ','T'));return isNaN(n)?null:n}
+function extract(text){
+  const out=[];
+  let json=null;try{json=JSON.parse(text)}catch(e){}
+  if(json){
+    (function walk(node,date){
+      if(Array.isArray(node)){node.forEach(n=>walk(n,date));return}
+      if(node&&typeof node==='object'){
+        let d=date;for(const k of ['Date','date','timestamp','Timestamp','created_at'])if(node[k]!=null){d=toTs(node[k])||d;break}
+        for(const k in node){const v=node[k];
+          if(typeof v==='string'&&/^https?:\/\//.test(v)&&platform(v)!=='autre')out.push({url:v,date:d});
+          else if(v&&typeof v==='object')walk(v,d)}
+      }
+    })(json,null);
+  }else{
+    let last=null;
+    text.split(/\r?\n/).forEach(l=>{const dm=l.match(/^\s*Date\s*:\s*(.+)$/i);if(dm)last=toTs(dm[1]);
+      const u=findUrl(l);if(u&&platform(u)!=='autre')out.push({url:u,date:last})});
+  }
+  return out;
+}
+$('#f-import').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  const text=await f.text();const found=extract(text);
+  if(!found.length){toast("Aucun lien TikTok ou Instagram trouvé dans ce fichier. Vérifie qu'il est au format JSON.");return}
+  const seen=new Set(items.map(i=>norm(i.url)));let add=0,dup=0;
+  found.forEach(x=>{const k=norm(x.url);if(seen.has(k)){dup++;return}seen.add(k);const p=platform(x.url);
+    items.push({id:uid(),url:x.url,platform:p,title:guessTitle(x.url,p),tag:'',note:'',savedAt:x.date||Date.now(),addedAt:Date.now(),imported:true});add++});
+  save();render();closeDlg('#setDlg');e.target.value='';
+  toast(add+' favori'+(add>1?'s':'')+' importé'+(add>1?'s':'')+(dup?' ('+dup+' déjà présents)':''));
+});
+$('#copyBackup').onclick=()=>{
+  const data=JSON.stringify(items.filter(i=>!i.example));
+  const ta=$('#f-restore');
+  const fallback=()=>{ta.value=data;ta.focus();ta.select();toast('Sauvegarde sélectionnée : copie-la avec le menu du téléphone')};
+  try{navigator.clipboard.writeText(data).then(()=>toast('Sauvegarde copiée'),fallback)}catch(e){fallback()}
+};
+$('#restoreBtn').onclick=()=>{
+  try{const arr=JSON.parse($('#f-restore').value);if(!Array.isArray(arr))throw 0;
+    const seen=new Set(items.map(i=>norm(i.url)));let add=0;
+    arr.forEach(x=>{if(x&&x.url&&!seen.has(norm(x.url))){seen.add(norm(x.url));items.push({...x,id:x.id||uid(),platform:platform(x.url)});add++}});
+    save();render();$('#f-restore').value='';closeDlg('#setDlg');toast(add+' favoris restaurés');
+  }catch(e){toast("Ce texte n'est pas une sauvegarde Mes Favoris valide.")}
+};
+
+/* Démarrage + réception d'un partage (Android : Partager › Mes Favoris) */
+items=load();
+if(!items){items=examples();save()}
+render();
+try{
+  const sp=new URLSearchParams(location.search);
+  if(sp.has('url')||sp.has('text')){
+    const txt=sp.get('text')||'',url=sp.get('url')||findUrl(txt);
+    const title=(sp.get('title')||txt.replace(url,'')).trim().slice(0,140);
+    history.replaceState(null,'',location.pathname);
+    if(url)openEdit(null,{url,title});
+  }
+}catch(e){}
+try{if('serviceWorker' in navigator&&window.__PWA__)navigator.serviceWorker.register('sw.js')}catch(e){}
+})();
+</script>
+
+</body>
+</html>
