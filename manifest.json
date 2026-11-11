@@ -1,11 +1,11 @@
 {
-  "name": "Mes Favoris",
-  "short_name": "Favoris",
+  "name": "Myfav's",
+  "short_name": "Myfav's",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F3F4F9",
-  "theme_color": "#3B4FD8",
+  "background_color": "#1F1C1D",
+  "theme_color": "#1F1C1D",
   "lang": "fr",
   "icons": [
     {
