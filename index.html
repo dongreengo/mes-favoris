@@ -53,7 +53,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;display:grid;grid-template-columns:76px 1fr auto;gap:12px;padding:10px;align-items:start}
 .thumb{width:76px;height:100px;border-radius:10px;position:relative;overflow:hidden;display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:1.5rem;text-decoration:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
 .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.thumb .badge{position:absolute;left:5px;bottom:5px;min-width:20px;height:20px;padding:0 4px;border-radius:6px;display:grid;place-items:center;font-size:.7rem;color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.thumb .badge{position:absolute;left:5px;bottom:5px;width:24px;height:24px;border-radius:7px;background:#fff;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.bigfav{width:46px;height:46px;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.fav{display:block;border-radius:4px}
+.favl{display:grid;place-items:center;width:100%;height:100%;border-radius:inherit;color:#fff;font-family:var(--display);font-weight:800;font-size:.75rem}
+.bigfav .favl{font-size:1.4rem}
+.chip .fav,.chip .favl{width:16px;height:16px;border-radius:4px;font-size:.6rem;flex:none}
 .thumb.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.18) 50%,transparent 70%);background-size:200% 100%;animation:sh 1.2s linear infinite}
 @keyframes sh{from{background-position:150% 0}to{background-position:-50% 0}}
 .pick{display:flex;gap:14px;align-items:center}
@@ -177,17 +182,17 @@ textarea{min-height:70px;resize:vertical}
 <script>
 (function(){
 const P={
-  tiktok:{n:'TikTok',c:'#16161D',l:'T',re:/(^|\.)tiktok\.com$/},
-  instagram:{n:'Instagram',c:'#C2357F',l:'I',re:/(^|\.)instagram\.com$|(^|\.)instagr\.am$/},
-  youtube:{n:'YouTube',c:'#D9201A',l:'Y',re:/(^|\.)youtube\.com$|(^|\.)youtu\.be$/},
-  facebook:{n:'Facebook',c:'#1767E0',l:'f',re:/(^|\.)facebook\.com$|(^|\.)fb\.watch$|(^|\.)fb\.com$/},
-  x:{n:'X',c:'#3A3A44',l:'X',re:/(^|\.)x\.com$|(^|\.)twitter\.com$/},
-  threads:{n:'Threads',c:'#55555F',l:'@',re:/(^|\.)threads\.(net|com)$/},
-  reddit:{n:'Reddit',c:'#E8470E',l:'r',re:/(^|\.)reddit\.com$|(^|\.)redd\.it$/},
-  pinterest:{n:'Pinterest',c:'#C8102E',l:'P',re:/(^|\.)pinterest\.[a-z.]+$|(^|\.)pin\.it$/},
-  snapchat:{n:'Snapchat',c:'#C9B800',l:'S',re:/(^|\.)snapchat\.com$/},
-  linkedin:{n:'LinkedIn',c:'#0A66C2',l:'in',re:/(^|\.)linkedin\.com$|(^|\.)lnkd\.in$/},
-  autre:{n:'Autre',c:'#6A6F8C',l:'•',re:null}
+  tiktok:{d:'tiktok.com',n:'TikTok',c:'#16161D',l:'T',re:/(^|\.)tiktok\.com$/},
+  instagram:{d:'instagram.com',n:'Instagram',c:'#C2357F',l:'I',re:/(^|\.)instagram\.com$|(^|\.)instagr\.am$/},
+  youtube:{d:'youtube.com',n:'YouTube',c:'#D9201A',l:'Y',re:/(^|\.)youtube\.com$|(^|\.)youtu\.be$/},
+  facebook:{d:'facebook.com',n:'Facebook',c:'#1767E0',l:'f',re:/(^|\.)facebook\.com$|(^|\.)fb\.watch$|(^|\.)fb\.com$/},
+  x:{d:'x.com',n:'X',c:'#3A3A44',l:'X',re:/(^|\.)x\.com$|(^|\.)twitter\.com$/},
+  threads:{d:'threads.net',n:'Threads',c:'#55555F',l:'@',re:/(^|\.)threads\.(net|com)$/},
+  reddit:{d:'reddit.com',n:'Reddit',c:'#E8470E',l:'r',re:/(^|\.)reddit\.com$|(^|\.)redd\.it$/},
+  pinterest:{d:'pinterest.com',n:'Pinterest',c:'#C8102E',l:'P',re:/(^|\.)pinterest\.[a-z.]+$|(^|\.)pin\.it$/},
+  snapchat:{d:'snapchat.com',n:'Snapchat',c:'#C9B800',l:'S',re:/(^|\.)snapchat\.com$/},
+  linkedin:{d:'linkedin.com',n:'LinkedIn',c:'#0A66C2',l:'in',re:/(^|\.)linkedin\.com$|(^|\.)lnkd\.in$/},
+  autre:{d:'',n:'Autre',c:'#6A6F8C',l:'•',re:null}
 };
 const KEY='mes-favoris-v1';
 const $=s=>document.querySelector(s);
@@ -229,8 +234,15 @@ function thumbHtml(i,link){
   const p=P[i.platform],tag=link?'a':'div';
   const attrs=link?`href="${esc(i.url)}" target="_blank" rel="noopener" aria-label="Ouvrir ${esc(i.title||'')}"`:'aria-hidden="true"';
   const loading=pending.has(i.id)?' loading':'';
-  if(i.thumb)return `<${tag} class="thumb${loading}" style="background:${p.c}" ${attrs}><img src="${esc(i.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-thumb="${i.id}"><span class="badge" style="background:${p.c}">${p.l}</span></${tag}>`;
-  return `<${tag} class="thumb${loading}" style="background:${p.c}" ${attrs}>${p.l}</${tag}>`;
+  const dom=p.d||host(i.url||'');
+  if(i.thumb)return `<${tag} class="thumb${loading}" style="background:${p.c}" ${attrs}><img src="${esc(i.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-thumb="${i.id}"><span class="badge">${fav(dom,p,16)}</span></${tag}>`;
+  return `<${tag} class="thumb${loading}" style="background:${p.c}" ${attrs}><span class="bigfav">${fav(dom,p,32)}</span></${tag}>`;
+}
+/* Icône officielle du site (favicon), lettre de secours si elle ne charge pas */
+function favUrl(dom){return 'https://www.google.com/s2/favicons?domain='+encodeURIComponent(dom)+'&sz=64'}
+function fav(dom,p,size){
+  if(!dom)return `<span class="favl" style="background:${p.c}">${p.l}</span>`;
+  return `<img class="fav" src="${favUrl(dom)}" width="${size}" height="${size}" alt="" loading="lazy" data-fav="${esc(p.l)}" data-c="${p.c}">`;
 }
 const pending=new Set(),queue=[],retried=new Set();let busy=false;
 function getJSON(u){
@@ -271,7 +283,9 @@ async function pump(){
   busy=false;
 }
 document.addEventListener('error',e=>{
-  const img=e.target;if(!img||img.tagName!=='IMG'||!img.dataset.thumb)return;
+  const img=e.target;if(!img||img.tagName!=='IMG')return;
+  if(img.dataset.fav){const s=document.createElement('span');s.className='favl';s.style.background=img.dataset.c;s.textContent=img.dataset.fav;img.replaceWith(s);return}
+  if(!img.dataset.thumb)return;
   const it=items.find(i=>i.id===img.dataset.thumb);img.remove();
   if(!it||it.customThumb||retried.has(it.id))return;
   retried.add(it.id);it.thumb=null;enqueue(it.id);   /* les liens d'image TikTok expirent : on redemande */
@@ -291,7 +305,7 @@ function render(){
   if(fPlat!=='all'&&!byPlat[fPlat])fPlat='all';
   if(fTag!=='all'&&!byTag[fTag])fTag='all';
   $('#platChips').innerHTML=`<button class="chip" data-p="all" aria-pressed="${fPlat==='all'}">Tout <span class="n">${items.length}</span></button>`+
-    plats.map(k=>`<button class="chip" data-p="${k}" aria-pressed="${fPlat===k}"><span class="dot" style="background:${P[k].c}"></span>${P[k].n} <span class="n">${byPlat[k]}</span></button>`).join('');
+    plats.map(k=>`<button class="chip" data-p="${k}" aria-pressed="${fPlat===k}">${P[k].d?fav(P[k].d,P[k],16):`<span class="dot" style="background:${P[k].c}"></span>`}${P[k].n} <span class="n">${byPlat[k]}</span></button>`).join('');
   const tags=Object.keys(byTag).sort((a,b)=>byTag[b]-byTag[a]);
   $('#tagChips').hidden=!tags.length;
   $('#tagChips').innerHTML=`<button class="chip" data-t="all" aria-pressed="${fTag==='all'}">Tous les thèmes</button>`+
