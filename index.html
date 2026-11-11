@@ -258,12 +258,28 @@ function getJSON(u){
 }
 function ytId(u){try{const x=new URL(u);if(/youtu\.be$/.test(x.hostname))return x.pathname.slice(1).split('/')[0];
   const m=x.pathname.match(/\/(shorts|embed|live)\/([\w-]{6,})/);return m?m[2]:x.searchParams.get('v')}catch(e){return null}}
+/* Liens courts TikTok (vm.tiktok.com…) : on retrouve l'adresse complète de la vidéo */
+async function resolveShort(url){
+  try{
+    const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url));const j=await r.json();
+    let u=j&&j.data&&j.data.url;
+    if(u&&!/^https?:\/\//.test(u)){const m=String(u).match(/https?:\/\/[^\s`'"]+/);u=m?m[0]:null}
+    const img=j&&j.status==='success'&&j.data.image&&j.data.image.url;
+    return {url:u&&/\/video\/|\/photo\//.test(u)?u.split('?')[0]:null,thumb:img||null,title:j&&j.status==='success'?j.data.title:null};
+  }catch(e){return {}}
+}
 async function fetchMeta(url,plat){
-  const enc=encodeURIComponent(url);let out={};
+  let out={};
+  if(plat==='tiktok'&&!/\/video\/|\/photo\//.test(url)){
+    const r=await resolveShort(url);if(r.url){out.fullUrl=r.url;url=r.url}
+    if(r.thumb)out.thumb=r.thumb;
+  }
+  const enc=encodeURIComponent(url);
   const tries=[];
   if(plat==='youtube'){const id=ytId(url);if(id)out.thumb=`https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
     tries.push(()=>getJSON('https://noembed.com/embed?url='+enc).then(j=>({title:j.title})))}
   if(plat==='tiktok')tries.push(()=>getJSON('https://www.tiktok.com/oembed?url='+enc).then(j=>({thumb:j.thumbnail_url,title:j.title||(j.author_unique_id?'Vidéo de @'+j.author_unique_id:'')})));
+  if(plat==='tiktok'&&out.thumb){const t=out.thumb;delete out.thumb;tries.push(()=>Promise.resolve({thumb:t}))}  /* l'image TikTok officielle d'abord */
   if(plat!=='youtube'&&plat!=='tiktok')tries.push(()=>getJSON('https://noembed.com/embed?url='+enc).then(j=>{if(j.error)throw 0;return {thumb:j.thumbnail_url,title:j.title}}));
   tries.push(()=>getJSON('https://api.microlink.io/?url='+enc).then(j=>{const d=j&&j.data||{};return {thumb:d.image&&d.image.url,title:d.title}}));
   for(const f of tries){
@@ -279,10 +295,11 @@ async function pump(){
     const id=queue.shift(),it=items.find(i=>i.id===id);
     if(it&&!it.customThumb){
       const m=await fetchMeta(it.url,it.platform);
+      if(m.fullUrl&&!items.some(i=>i!==it&&norm(i.url)===norm(m.fullUrl)))it.url=m.fullUrl;
       if(m.thumb)it.thumb=m.thumb;
       const auto=it.autoTitle||it.title===guessTitle(it.url,it.platform);
       if(m.title&&auto){it.title=String(m.title).replace(/\s+/g,' ').trim().slice(0,160);it.autoTitle=true}
-      it.metaTried=Date.now();
+      it.metaTried=Date.now();it.metaV=2;
     }
     pending.delete(id);save();render();
     await new Promise(r=>setTimeout(r,400));
@@ -478,7 +495,7 @@ $('#restoreBtn').onclick=()=>{
 items=load();
 if(!items){items=examples();save()}
 render();
-items.forEach(i=>{if(!i.example&&!i.thumb&&!i.customThumb&&(!i.metaTried||Date.now()-i.metaTried>86400000))enqueue(i.id)});
+items.forEach(i=>{if(!i.example&&!i.thumb&&!i.customThumb&&(!i.metaTried||i.metaV!==2||Date.now()-i.metaTried>86400000))enqueue(i.id)});
 try{
   const sp=new URLSearchParams(location.search);
   if(sp.has('url')||sp.has('text')){
